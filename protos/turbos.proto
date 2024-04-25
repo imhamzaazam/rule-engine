@@ -1,0 +1,14 @@
+
+syntax = "proto3";
+
+option go_package = "codegen/pb";
+
+
+
+message TransactionRuleSchema {
+  int64 total_auth_amount = 1;
+  string total_auth_amount_currency = 2 ;
+  string scheme_merchant_category_code = 4;
+  string scheme_merchant_id = 5;
+  string scheme_terminal_id = 6;
+}
