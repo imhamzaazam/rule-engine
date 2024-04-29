@@ -29,24 +29,53 @@ func main() {
 
 	data := map[string]interface{}{
 		"txn": &pb.TransactionRuleSchema{
-			SchemeMerchantCategoryCode: "222",
+			SchemeMerchantCategoryCode: "444",
 			TotalAuthAmount:            990,
 		},
 	}
-
 	txnRule := indigo.Rule{
 		ID:         "transaction_rule",
 		Schema:     txnRuleSchema,
 		ResultType: indigo.Float{},
-		Expr: "(txn.total_auth_amount >= 100 && " +
-			"txn.scheme_merchant_category_code in " +
-			"{'111': 1.0, " +
-			"'222': 2.2, " +
-			"'333': 3.0}) ? " +
-			"({'111': 1.0, " +
-			"'222': 2.2, " +
-			"'333': 3.0}[txn.scheme_merchant_category_code]) " +
-			": 0.0",
+		Rules:      map[string]*indigo.Rule{},
+	}
+
+	txnRule.Rules["1_percent"] = &indigo.Rule{
+		ID:         "1_percent",
+		Schema:     txnRuleSchema,
+		ResultType: indigo.Float{},
+		Expr: `
+		[
+		   '111',
+		   '222',
+		   '333',
+		].exists(mcc, mcc == txn.scheme_merchant_category_code) ?
+		{
+		   '111': 1.0,
+		   '222': 2.2,
+		   '333': 3.1,
+		}[txn.scheme_merchant_category_code] : 0.0
+		`,
+	}
+
+	txnRule.Rules["2_percent"] = &indigo.Rule{
+		ID:         "2_percent",
+		Schema:     txnRuleSchema,
+		ResultType: indigo.Float{},
+		Expr: `
+		[
+		   '111',
+		   '222',
+		   '333',
+		   '444',
+		].exists(mcc, mcc == txn.scheme_merchant_category_code) ?
+		{
+		   '111': 1.0,
+		   '222': 2.2,
+		   '333': 3.1,
+           '444': 5.5,
+		}[txn.scheme_merchant_category_code] : 0.0
+		`,
 	}
 
 	engine := indigo.NewEngine(cel.NewEvaluator())
@@ -56,7 +85,7 @@ func main() {
 		fmt.Printf("Error adding rule %v", err)
 
 	}
-	results, err := engine.Eval(context.Background(), &txnRule, data)
+	results, err := engine.Eval(context.Background(), txnRule.Rules["2_percent"], data)
 	if err != nil {
 		fmt.Printf("Error evaluating: %v", err)
 		return
