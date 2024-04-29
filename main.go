@@ -7,7 +7,6 @@ import (
 	"github.com/ezachrisen/indigo/cel"
 	"google.golang.org/genproto/googleapis/type/decimal"
 	pb "rule-engine/protos"
-	"strings"
 	"time"
 )
 
@@ -30,22 +29,24 @@ func main() {
 
 	data := map[string]interface{}{
 		"txn": &pb.TransactionRuleSchema{
-			SchemeMerchantCategoryCode: "111",
-			TotalAuthAmount:            100,
+			SchemeMerchantCategoryCode: "222",
+			TotalAuthAmount:            990,
 		},
 	}
 
-	//data2 := map[string]interface{}{
-	//	"flights": map[string]int64{"1111": 1.0, "DL232": 1.0, "AA1622": 1.0},
-	//}
-
-	listOfMcc := []string{"111", "222", "333"}
-	expr := formatString(listOfMcc)
-
 	txnRule := indigo.Rule{
-		ID:     "transaction_rule",
-		Schema: txnRuleSchema,
-		Expr:   expr,
+		ID:         "transaction_rule",
+		Schema:     txnRuleSchema,
+		ResultType: indigo.Float{},
+		Expr: "(txn.total_auth_amount >= 100 && " +
+			"txn.scheme_merchant_category_code in " +
+			"{'111': 1.0, " +
+			"'222': 2.2, " +
+			"'333': 3.0}) ? " +
+			"({'111': 1.0, " +
+			"'222': 2.2, " +
+			"'333': 3.0}[txn.scheme_merchant_category_code]) " +
+			": 0.0",
 	}
 
 	engine := indigo.NewEngine(cel.NewEvaluator())
@@ -60,16 +61,8 @@ func main() {
 		fmt.Printf("Error evaluating: %v", err)
 		return
 	}
-	fmt.Println(results.ExpressionPass)
-}
+	fmt.Println(results.Pass)
+	sum := results.Value
+	fmt.Println(sum)
 
-func formatString(listOfMcc []string) string {
-	var mccExpressions []string
-	for _, mcc := range listOfMcc {
-		mccWithQuotes := fmt.Sprintf(`"%s"`, mcc)
-		mccExpressions = append(mccExpressions, mccWithQuotes)
-	}
-	expr := fmt.Sprintf("[%s].exists(mcc, mcc == txn.scheme_merchant_category_code)",
-		strings.Join(mccExpressions, ", "))
-	return expr
 }
