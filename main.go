@@ -37,16 +37,13 @@ func main() {
 	txnRule := indigo.Rule{
 		ID:         "transaction_rule",
 		Schema:     txnRuleSchema,
-		ResultType: indigo.Float{},
-		Expr: "(txn.total_auth_amount >= 100 && " +
-			"txn.scheme_merchant_category_code in " +
-			"{'111': 1.0, " +
+		ResultType: indigo.Map{KeyType: indigo.Bool{}, ValueType: indigo.Float{}},
+		Expr: "(txn.total_auth_amount >= 100) && " +
+			"['111' , '222', '333'].exists(mcc, mcc == txn.scheme_merchant_category_code) ? " +
+			"{ true: {'111': 1.0, " +
 			"'222': 2.2, " +
-			"'333': 3.0}) ? " +
-			"({'111': 1.0, " +
-			"'222': 2.2, " +
-			"'333': 3.0}[txn.scheme_merchant_category_code]) " +
-			": 0.0",
+			"'333': 3.0}[txn.scheme_merchant_category_code]} " +
+			": {false: 0.0}",
 	}
 
 	engine := indigo.NewEngine(cel.NewEvaluator())
@@ -61,8 +58,7 @@ func main() {
 		fmt.Printf("Error evaluating: %v", err)
 		return
 	}
-	fmt.Println(results.Pass)
-	sum := results.Value
-	fmt.Println(sum)
+
+	fmt.Println(results.Value)
 
 }
